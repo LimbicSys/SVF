@@ -788,6 +788,10 @@ void ForkJoinAnalysis::analyzeForkJoinPair()
                 DBOUT(DMTA,cts.dump());
                 DBOUT(DMTA,outs() << "-----\n");
 				PTACallGraph::FunctionSet callees;
+                if (curInst->isDebugOrPseudoInst())
+                {
+                    continue;
+                }
                 if(isTDFork(curInst))
                 {
                     handleFork(cts,rootTid);

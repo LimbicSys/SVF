@@ -69,34 +69,36 @@ fi
 ########
 # Download LLVM if need be.
 #######
-if [ ! -d "$LLVM_DIR" ]
-then
-    if [ ! -d "$LLVMHome" ]
-    then
-        echo "Downloading LLVM binary for $OSDisplayName"
-        generic_download_file "$urlLLVM" llvm.tar.xz
-        mkdir -p "./$LLVMHome" && tar -xf llvm.tar.xz -C "./$LLVMHome" --strip-components 1
-        rm llvm.tar.xz
-    fi
+# if [ ! -d "$LLVM_DIR" ]
+# then
+#     if [ ! -d "$LLVMHome" ]
+#     then
+#         echo "Downloading LLVM binary for $OSDisplayName"
+#         generic_download_file "$urlLLVM" llvm.tar.xz
+#         mkdir -p "./$LLVMHome" && tar -xf llvm.tar.xz -C "./$LLVMHome" --strip-components 1
+#         rm llvm.tar.xz
+#     fi
 
-    export LLVM_DIR="$SVFHOME/$LLVMHome"
-fi
+#     export LLVM_DIR="$SVFHOME/$LLVMHome"
+# fi
+export LLVM_DIR="$SVFHOME/llvm-12.0.0.obj"
 
 ########
 # Download Z3 if need be.
 #######
-if [ ! -d "$Z3_DIR" ]
-then
-    if [ ! -d "$Z3Home" ]
-    then
-        echo "Downloading Z3 binary for $OSDisplayName"
-        generic_download_file "$urlZ3" z3.zip
-        unzip -q "z3.zip" && mv ./z3-* ./$Z3Home
-        rm z3.zip
-    fi
+# if [ ! -d "$Z3_DIR" ]
+# then
+#     if [ ! -d "$Z3Home" ]
+#     then
+#         echo "Downloading Z3 binary for $OSDisplayName"
+#         generic_download_file "$urlZ3" z3.zip
+#         unzip -q "z3.zip" && mv ./z3-* ./$Z3Home
+#         rm z3.zip
+#     fi
 
-    export Z3_DIR="$SVFHOME/$Z3Home"
-fi
+#     export Z3_DIR="$SVFHOME/$Z3Home"
+# fi
+export Z3_DIR="$SVFHOME/z3.obj"
 
 ########
 # Download ctir Clang if need be.
@@ -128,14 +130,14 @@ then
 	rm -rf ./'Debug-build'
 	mkdir ./'Debug-build'
 	cd ./'Debug-build'
-	cmake -D CMAKE_BUILD_TYPE:STRING=Debug ../
+	cmake -D CMAKE_BUILD_TYPE:STRING=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=YES ../
 else
 	rm -rf ./'Release-build'
 	mkdir ./'Release-build'
 	cd ./'Release-build'
-	cmake ../
+	cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=YES ../
 fi
-make -j 4
+make -j 6
 
 ########
 # Set up environment variables of SVF

@@ -180,7 +180,7 @@ public:
     }
 
     /// Initialize analysis
-    void initialize(SVFModule* module);
+    void initialize();
 	
 	inline PAG* getPAG() {
 		return mhp->getTCT()->getPTA()->getPAG();

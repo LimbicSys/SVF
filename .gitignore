@@ -19,3 +19,5 @@ doxygen/
 *.log
 *.status
 *.obj
+z3
+*.dot

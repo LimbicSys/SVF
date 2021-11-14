@@ -754,11 +754,11 @@ void MTASVFGBuilder::connectMHPEdges(PointerAnalysis* pta)
 /*!
  * Initialize analysis
  */
-void FSMPTA::initialize(SVFModule* module)
+void FSMPTA::initialize()
 {
     PointerAnalysis::initialize();
 
-    AndersenWaveDiff* ander = AndersenWaveDiff::createAndersenWaveDiff(getPAG());
+    ander = AndersenWaveDiff::createAndersenWaveDiff(getPAG());
     MTASVFGBuilder mtaSVFGBuilder(mhp,lockana);
     svfg = mtaSVFGBuilder.buildPTROnlySVFG(ander);
     setGraph(svfg);

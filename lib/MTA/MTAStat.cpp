@@ -124,7 +124,21 @@ void MTAStat::performMHPPairStat(MHP* mhp, LockAnalysis* lsa)
         {
             for(InstSet::const_iterator it2 = instSet2.begin(), eit2 = instSet2.end(); it2!=eit2; ++it2)
             {
-                mhp->mayHappenInParallel(*it1,*it2);
+                if (mhp->mayHappenInParallel(*it1,*it2)) 
+                {
+                    // TODO: inst -> edge -> node -> point to
+                    // 1. ICFG::getIntraBlockNode
+                    auto &loc1 = (*it1)->getDebugLoc();
+                    auto &loc2 = (*it2)->getDebugLoc();
+                    if (loc1 && loc2)
+                    {
+                        loc1.print(SVFUtil::outs());
+                        SVFUtil::outs() << "\n";
+                        loc2.print(SVFUtil::outs());
+                        SVFUtil::outs() << "\n";
+                        SVFUtil::outs() << "\n";
+                    }
+                }
             }
         }
     }

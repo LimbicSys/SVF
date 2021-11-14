@@ -58,7 +58,14 @@ bool MTA::runOnModule(SVFModule* module)
 
     MHP* mhp = computeMHP(module);
     LockAnalysis* lsa = computeLocksets(mhp->getTCT());
+    // stat->performMHPPairStat(mhp,lsa);
+    auto pta = FSMPTA::createFSMPTA(module, mhp,lsa);
 
+
+    if (pta->printStat())
+        stat->performMHPPairStat(mhp,lsa);
+
+    FSMPTA::releaseFSMPTA();
 
 
     /*
