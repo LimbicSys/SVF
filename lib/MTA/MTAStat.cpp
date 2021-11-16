@@ -126,8 +126,6 @@ void MTAStat::performMHPPairStat(MHP* mhp, LockAnalysis* lsa)
             {
                 if (mhp->mayHappenInParallel(*it1,*it2)) 
                 {
-                    // TODO: inst -> edge -> node -> point to
-                    // 1. ICFG::getIntraBlockNode
                     auto &loc1 = (*it1)->getDebugLoc();
                     auto &loc2 = (*it2)->getDebugLoc();
                     if (loc1 && loc2)

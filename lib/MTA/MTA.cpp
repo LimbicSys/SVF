@@ -15,6 +15,7 @@
 #include "MTA/FSMPTA.h"
 #include "Util/SVFUtil.h"
 #include "SVF-FE/PAGBuilder.h"
+#include "MTA/MHPAnalysis.h"
 
 using namespace SVF;
 using namespace SVFUtil;
@@ -59,11 +60,10 @@ bool MTA::runOnModule(SVFModule* module)
     MHP* mhp = computeMHP(module);
     LockAnalysis* lsa = computeLocksets(mhp->getTCT());
     // stat->performMHPPairStat(mhp,lsa);
-    auto pta = FSMPTA::createFSMPTA(module, mhp,lsa);
-
-
-    if (pta->printStat())
-        stat->performMHPPairStat(mhp,lsa);
+    FlowSensitive *pta = FSMPTA::createFSMPTA(module, mhp,lsa);
+    SVFG *svfg = pta->getSVFG();
+    MHPAnalysis mhpAna(svfg, mhp);
+    mhpAna.getMHPInstructions(svfg->getPTA());
 
     FSMPTA::releaseFSMPTA();
 

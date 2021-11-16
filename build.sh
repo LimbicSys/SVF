@@ -137,7 +137,7 @@ else
 	cd ./'Release-build'
 	cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=YES ../
 fi
-make -j 6
+# make -j 6
 
 ########
 # Set up environment variables of SVF
