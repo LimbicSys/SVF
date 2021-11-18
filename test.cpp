@@ -5,18 +5,27 @@
 
 pthread_mutex_t m1, m2;
 int x = 1;
-int *p = new int;
+int *p;
 int y = 2;
+int *q = &x;
 
 void *thread1(void *arg)
 {
+    // pthread_mutex_lock(&m1);
     p = &x;
+    *q = 3;
+    x = 2;
+    // pthread_mutex_unlock(&m1);
     return nullptr;
 }
 
 void *thread2(void *arg)
 {
+    // pthread_mutex_lock(&m1);
     *p = 2;
+    int y = *q;
+    *q = 4;
+    // pthread_mutex_unlock(&m1);
     return nullptr;
 }
 
@@ -38,6 +47,5 @@ int main()
     pthread_join(t2, nullptr);
     // pthread_join(t3, nullptr);
     int c = y;
-    delete p;
     return 0;
 }

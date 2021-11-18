@@ -12,7 +12,8 @@ void MHPAnalysis::collectLoadStoreSVFGNodes()
             const StmtSVFGNode *node = SVFUtil::cast<StmtSVFGNode>(snode);
             if (node->getInst())
             {
-                ldnodeSet.insert(node);
+                // ldnodeSet.insert(node);
+                nodeSet.insert(node);
             }
         }
         if (SVFUtil::isa<StoreSVFGNode>(snode))
@@ -20,7 +21,8 @@ void MHPAnalysis::collectLoadStoreSVFGNodes()
             const StmtSVFGNode *node = SVFUtil::cast<StmtSVFGNode>(snode);
             if (node->getInst())
             {
-                stnodeSet.insert(node);
+                // stnodeSet.insert(node);
+                nodeSet.insert(node);
             }
         }
     }
@@ -28,59 +30,72 @@ void MHPAnalysis::collectLoadStoreSVFGNodes()
 
 void MHPAnalysis::getMHPInstructions(PointerAnalysis *pta)
 {
-    for (SVFGNodeSet::const_iterator it1 = stnodeSet.begin(), eit1 = stnodeSet.end(); it1 != eit1; ++it1)
-    {
-        const StmtSVFGNode *n1 = SVFUtil::cast<StmtSVFGNode>(*it1);
-        const Instruction *i1 = n1->getInst();
 
-        for (SVFGNodeSet::const_iterator it2 = ldnodeSet.begin(), eit2 = ldnodeSet.end(); it2 != eit2; ++it2)
-        {
-            const StmtSVFGNode *n2 = SVFUtil::cast<StmtSVFGNode>(*it2);
-            const Instruction *i2 = n2->getInst();
-            handleStoreLoad(n1, n2, pta);
+    // SVFUtil::outs() << "store: \n";
+    // for (SVFGNodeSet::const_iterator it1 = stnodeSet.begin(), eit1 = stnodeSet.end(); it1 != eit1; ++it1)
+    // {
+    //     const StmtSVFGNode *n1 = SVFUtil::cast<StmtSVFGNode>(*it1);
+    //     const Instruction *i1 = n1->getInst();
+    //     auto &loc = i1->getDebugLoc();
+    //     if (loc) {
+    //         loc->print(SVFUtil::outs());
+    //         SVFUtil::outs() << "\n";
+    //     }
+    // }
+
+    // SVFUtil::outs() << "load: \n";
+    // for (SVFGNodeSet::const_iterator it1 = ldnodeSet.begin(), eit1 = ldnodeSet.end(); it1 != eit1; ++it1)
+    // {
+    //     const StmtSVFGNode *n1 = SVFUtil::cast<StmtSVFGNode>(*it1);
+    //     const Instruction *i1 = n1->getInst();
+    //     auto &loc = i1->getDebugLoc();
+    //     if (loc) {
+    //         loc->print(SVFUtil::outs());
+    //         SVFUtil::outs() << "\n";
+    //     }
+    // }
+
+    for (auto it1 = nodeSet.begin(); it1 != nodeSet.end(); it1++) {
+        const StmtSVFGNode *node1 = SVFUtil::cast<StmtVFGNode>(*it1);
+        const Instruction *inst1 = node1->getInst();
+        auto &loc1 = inst1->getDebugLoc();
+        if (!loc1) {
+            continue;
         }
-
-        for (SVFGNodeSet::const_iterator it2 = std::next(it1), eit2 = stnodeSet.end(); it2 != eit2; ++it2)
-        {
-            const StmtSVFGNode *n2 = SVFUtil::cast<StmtSVFGNode>(*it2);
-            const Instruction *i2 = n2->getInst();
-            handleStoreStore(n1, n2, pta);
+        for (auto it2 = std::next(it1); it2 != nodeSet.end(); it2++) {
+            const StmtSVFGNode *node2 = SVFUtil::cast<StmtVFGNode>(*it2);
+            const Instruction *inst2 = node1->getInst();
+            auto &loc2 = inst2->getDebugLoc();
+            if (!loc2) {
+                continue;
+            }
+            handleInstPair(node1, node2, pta);
         }
     }
 }
 
-void MHPAnalysis::handleStoreLoad(const StmtSVFGNode *n1, const StmtSVFGNode *n2, PointerAnalysis *pta)
-{
+void MHPAnalysis::handleInstPair(const StmtSVFGNode *n1, const StmtVFGNode *n2, PointerAnalysis *pta) {
     const Instruction *i1 = n1->getInst();
     const Instruction *i2 = n2->getInst();
 
     if (!mhp->mayHappenInParallel(i1, i2))
         return;
+
     /// Alias
-    if (!pta->alias(n1->getPAGDstNodeID(), n2->getPAGSrcNodeID()))
-        return;
-    auto &loc1 = i1->getDebugLoc();
-    auto &loc2 = i2->getDebugLoc();
-    if (loc1 && loc2)
-    {
-        loc1.print(SVFUtil::outs());
-        SVFUtil::outs() << "\n";
-        loc2.print(SVFUtil::outs());
-        SVFUtil::outs() << "\n";
-        SVFUtil::outs() << "\n";
+    NodeID id1(0), id2(0);
+    if (SVFUtil::isa<LoadSVFGNode>(n1)) {
+        id1 = n1->getPAGSrcNodeID();
+    } else {
+        id1 = n1->getPAGDstNodeID();
     }
-}
-
-void MHPAnalysis::handleStoreStore(const StmtSVFGNode *n1, const StmtSVFGNode *n2, PointerAnalysis *pta)
-{
-    const Instruction *i1 = n1->getInst();
-    const Instruction *i2 = n2->getInst();
-
-    if (!mhp->mayHappenInParallel(i1, i2))
+    if (SVFUtil::isa<LoadSVFGNode>(n2)) {
+        id2 = n2->getPAGSrcNodeID();
+    } else {
+        id2 = n2->getPAGDstNodeID();
+    }
+    if (!pta->alias(id1,id2))
         return;
-    /// Alias
-    if (!pta->alias(n1->getPAGDstNodeID(), n2->getPAGSrcNodeID()))
-        return;
+
     auto &loc1 = i1->getDebugLoc();
     auto &loc2 = i2->getDebugLoc();
     if (loc1 && loc2)

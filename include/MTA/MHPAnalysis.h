@@ -23,12 +23,10 @@ class MHPAnalysis
     MHP *mhp;
 
     /// all stores/loads SVFGNodes
-    SVFGNodeSet stnodeSet;
-    SVFGNodeSet ldnodeSet;
+    SVFGNodeSet nodeSet;
 
     void collectLoadStoreSVFGNodes();
-    void handleStoreLoad(const StmtSVFGNode *n1, const StmtSVFGNode *n2, PointerAnalysis *pta);
-    void handleStoreStore(const StmtSVFGNode *n1, const StmtSVFGNode *n2, PointerAnalysis *pta);
+    void handleInstPair(const StmtSVFGNode *n1, const StmtVFGNode *n2, PointerAnalysis *pta);
 
   public:
     MHPAnalysis(SVFG *g, MHP *m) : svfg(g), mhp(m)
