@@ -64,7 +64,7 @@ void MHPAnalysis::getMHPInstructions(PointerAnalysis *pta)
         }
         for (auto it2 = std::next(it1); it2 != nodeSet.end(); it2++) {
             const StmtSVFGNode *node2 = SVFUtil::cast<StmtVFGNode>(*it2);
-            const Instruction *inst2 = node1->getInst();
+            const Instruction *inst2 = node2->getInst();
             auto &loc2 = inst2->getDebugLoc();
             if (!loc2) {
                 continue;
@@ -78,22 +78,42 @@ void MHPAnalysis::handleInstPair(const StmtSVFGNode *n1, const StmtVFGNode *n2, 
     const Instruction *i1 = n1->getInst();
     const Instruction *i2 = n2->getInst();
 
-    if (!mhp->mayHappenInParallel(i1, i2))
-        return;
-
-    /// Alias
+    /// Alias check
     NodeID id1(0), id2(0);
-    if (SVFUtil::isa<LoadSVFGNode>(n1)) {
+    bool isLoad1 = SVFUtil::isa<LoadSVFGNode>(n1);
+    bool isLoad2 = SVFUtil::isa<LoadSVFGNode>(n2);
+
+    // for global pointer
+    if (isLoad1) {
         id1 = n1->getPAGSrcNodeID();
     } else {
         id1 = n1->getPAGDstNodeID();
     }
-    if (SVFUtil::isa<LoadSVFGNode>(n2)) {
+    if (isLoad2) {
         id2 = n2->getPAGSrcNodeID();
     } else {
         id2 = n2->getPAGDstNodeID();
     }
-    if (!pta->alias(id1,id2))
+
+    NodeID svfgNodeId1 = n1->getId();
+    NodeID svfgNodeId2 = n2->getId();
+
+    if (!pta->alias(id1, id2)) {
+        // for pointers passed via arg
+        if (isLoad1 && isLoad2) {
+            id1 = n1->getPAGDstNodeID();
+            id2 = n2->getPAGDstNodeID();
+            if (!pta->alias(id1, id2))
+            {
+                return;
+            }
+        }
+        else {
+            return;
+        }
+    }
+
+    if (!mhp->mayHappenInParallel(i1, i2))
         return;
 
     auto &loc1 = i1->getDebugLoc();
@@ -101,9 +121,9 @@ void MHPAnalysis::handleInstPair(const StmtSVFGNode *n1, const StmtVFGNode *n2, 
     if (loc1 && loc2)
     {
         loc1.print(SVFUtil::outs());
-        SVFUtil::outs() << "\n";
+        SVFUtil::outs() << " " << "svfg id: " << n1->getId() << "\n";
         loc2.print(SVFUtil::outs());
-        SVFUtil::outs() << "\n";
+        SVFUtil::outs() << " " << "svfg id: " << n2->getId() << "\n";
         SVFUtil::outs() << "\n";
     }
 }

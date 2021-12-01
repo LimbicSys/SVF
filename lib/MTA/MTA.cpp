@@ -63,7 +63,8 @@ bool MTA::runOnModule(SVFModule* module)
     FlowSensitive *pta = FSMPTA::createFSMPTA(module, mhp,lsa);
     SVFG *svfg = pta->getSVFG();
     MHPAnalysis mhpAna(svfg, mhp);
-    mhpAna.getMHPInstructions(svfg->getPTA());
+    // PrintAliasPairs(pta);
+    mhpAna.getMHPInstructions(pta);
 
     FSMPTA::releaseFSMPTA();
 
@@ -214,3 +215,28 @@ void MTA::detect(SVFModule* module)
     outs() << "HP needcheck: " << needcheckinst.size() << "\n";
 }
 
+void MTA::PrintAliasPairs(PointerAnalysis* pta)
+{
+    PAG* pag = pta->getPAG();
+    for (PAG::iterator lit = pag->begin(), elit = pag->end(); lit != elit; ++lit)
+    {
+        PAGNode* node1 = lit->second;
+        PAGNode* node2 = node1;
+        for (PAG::iterator rit = lit, erit = pag->end(); rit != erit; ++rit)
+        {
+            node2 = rit->second;
+            if(node1==node2)
+                continue;
+            const Function* fun1 = node1->getFunction();
+            const Function* fun2 = node2->getFunction();
+            AliasResult result = pta->alias(node1->getId(), node2->getId());
+            if (result != AliasResult::NoAlias) {
+            SVFUtil::outs() << " var" << node1->getId() << "[" << node1->getValueName()
+                            << "@" << (fun1==nullptr?"":fun1->getName()) << "] " << 
+                            "--"
+                            << " var" << node2->getId() << "[" << node2->getValueName()
+                            << "@" << (fun2==nullptr?"":fun2->getName()) << "]\n";
+            }
+        }
+    }
+}

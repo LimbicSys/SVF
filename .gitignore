@@ -21,3 +21,4 @@ doxygen/
 *.obj
 z3
 *.dot
+llvm*

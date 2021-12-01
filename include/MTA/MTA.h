@@ -30,6 +30,7 @@ class SVFModule;
 class MTA: public ModulePass
 {
 
+    // TODO: collect free
 public:
     typedef Set<const LoadInst*> LoadSet;
     typedef Set<const StoreInst*> StoreSet;
@@ -93,6 +94,8 @@ private:
     MTAStat* stat;
     static FunToSEMap func2ScevMap;
     static FunToLoopInfoMap func2LoopInfoMap;
+
+    void PrintAliasPairs(PointerAnalysis* pta);
 };
 
 } // End namespace SVF
