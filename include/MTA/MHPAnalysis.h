@@ -5,6 +5,8 @@
 
 namespace SVF
 {
+// TODO: collect free, refer to `LeakChecker::initSnks()`
+// check the arg of free is in the MHP pairs
 
 class MHPAnalysis
 {
@@ -23,10 +25,12 @@ class MHPAnalysis
     MHP *mhp;
 
     /// all stores/loads SVFGNodes
-    SVFGNodeSet nodeSet;
+    SVFGNodeSet ldStNodeSet;
+
+    SVFGNodeSet markedNodeSet;
 
     void collectLoadStoreSVFGNodes();
-    void handleInstPair(const StmtSVFGNode *n1, const StmtVFGNode *n2, PointerAnalysis *pta);
+    bool isMHPPair(const StmtSVFGNode *n1, const StmtVFGNode *n2, PointerAnalysis *pta);
 
   public:
     MHPAnalysis(SVFG *g, MHP *m) : svfg(g), mhp(m)
@@ -35,6 +39,7 @@ class MHPAnalysis
     }
 
     void getMHPInstructions(PointerAnalysis *pta);
+    void dump(llvm::StringRef filename);
 };
 
 } // namespace SVF

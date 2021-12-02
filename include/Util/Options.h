@@ -138,6 +138,7 @@ public:
     // MTA.cpp
     static const llvm::cl::opt<bool> AndersenAnno;
     static const llvm::cl::opt<bool> FSAnno;
+    static const llvm::cl::opt<std::string> DumpMHPPair;
 
     // MTAAnnotator.cpp
     static const llvm::cl::opt<u32_t> AnnoFlag;

@@ -30,6 +30,7 @@ int main(int argc, char ** argv)
 
     MTA *mta = new MTA();
     mta->runOnModule(svfModule);
+    delete mta;
 
     return 0;
 }

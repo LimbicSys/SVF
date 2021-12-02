@@ -30,7 +30,6 @@ class SVFModule;
 class MTA: public ModulePass
 {
 
-    // TODO: collect free
 public:
     typedef Set<const LoadInst*> LoadSet;
     typedef Set<const StoreInst*> StoreSet;

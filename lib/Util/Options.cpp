@@ -450,6 +450,12 @@ namespace SVF
         llvm::cl::desc("Add TSan annotation according to flow-sensitive analysis")
     );
 
+    const llvm::cl::opt<std::string> Options::DumpMHPPair(
+        "dump-mhp",
+        llvm::cl::init(""),
+        llvm::cl::desc("dump MHP pairs")
+    );
+
 
     // MTAAnnotator.cpp
     const llvm::cl::opt<u32_t> Options::AnnoFlag(

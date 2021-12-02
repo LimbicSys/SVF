@@ -59,13 +59,14 @@ bool MTA::runOnModule(SVFModule* module)
 
     MHP* mhp = computeMHP(module);
     LockAnalysis* lsa = computeLocksets(mhp->getTCT());
-    // stat->performMHPPairStat(mhp,lsa);
-    FlowSensitive *pta = FSMPTA::createFSMPTA(module, mhp,lsa);
+    FlowSensitive *pta = FSMPTA::createFSMPTA(module, mhp, lsa);
     SVFG *svfg = pta->getSVFG();
     MHPAnalysis mhpAna(svfg, mhp);
     // PrintAliasPairs(pta);
     mhpAna.getMHPInstructions(pta);
-
+    if (!Options::DumpMHPPair.empty()) {
+        mhpAna.dump(Options::DumpMHPPair.c_str());
+    }
     FSMPTA::releaseFSMPTA();
 
 
