@@ -107,11 +107,14 @@ void MHPAnalysis::dump(llvm::StringRef filename) {
     SVFUtil::outs() << "Write MHP pairs to " << filename << "\n";
     for (const SVFGNode *node : markedNodeSet) {
         const Instruction *inst =  SVFUtil::cast<StmtVFGNode>(node)->getInst();
-        auto &loc1 = inst->getDebugLoc();
-        if (loc1)
+        auto &loc = inst->getDebugLoc();
+        if (loc)
         {
-            loc1.print(file);
-            file << "\n";
+            llvm::StringRef filename = loc->getFilename();
+            llvm::SmallVector<char> path(filename.begin(), filename.end());
+            llvm::sys::fs::make_absolute(path);
+            std::string fullname(path.begin(), path.end());
+            file << fullname << ":" << loc->getLine() << ":" << loc->getColumn() << "\n";
         }
     }
     file.close();
