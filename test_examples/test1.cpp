@@ -38,6 +38,10 @@ int main()
 {
     pthread_t t1, t2, t3;
     int c = 111;
+    int *z = new int;
+    delete z;
+    z = (int*)malloc(sizeof(int));
+    free(z);
     pthread_mutex_init(&m1, nullptr);
     pthread_mutex_init(&m2, nullptr);
     pthread_create(&t1, nullptr, thread1, &c);

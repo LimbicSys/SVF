@@ -2,11 +2,10 @@
 #define MHPANALYSIS_H_
 
 #include "MTA/FSMPTA.h"
+#include "SABER/SaberCheckerAPI.h"
 
 namespace SVF
 {
-// TODO: collect free, refer to `LeakChecker::initSnks()`
-// check the arg of free is in the MHP pairs
 
 class MHPAnalysis
 {
@@ -28,16 +27,25 @@ class MHPAnalysis
     SVFGNodeSet ldStNodeSet;
 
     SVFGNodeSet markedNodeSet;
+    CallSiteSet deallocCallsite;
 
     void collectLoadStoreSVFGNodes();
-    bool isMHPPair(const StmtSVFGNode *n1, const StmtVFGNode *n2, PointerAnalysis *pta);
 
-  public:
-    MHPAnalysis(SVFG *g, MHP *m) : svfg(g), mhp(m)
+    // collect deallocs
+    void collectSinks();
+
+    PTACallGraph *getCallgraph();
+
+    inline bool isSinkLikeFun(const SVFFunction *fun) 
     {
-        collectLoadStoreSVFGNodes();
+        return SaberCheckerAPI::getCheckerAPI()->isMemDealloc(fun);
     }
 
+    bool isMHPPair(const StmtSVFGNode *n1, const StmtVFGNode *n2, PointerAnalysis *pta);
+
+    void writeLocInfo(raw_ostream &outs, const llvm::DebugLoc& loc);
+  public:
+    MHPAnalysis(SVFG *g, MHP *m);
     void getMHPInstructions(PointerAnalysis *pta);
     void dump(llvm::StringRef filename);
 };

@@ -2,6 +2,12 @@
 
 using namespace SVF;
 
+MHPAnalysis::MHPAnalysis(SVFG *g, MHP *m) : svfg(g), mhp(m)
+{
+    collectLoadStoreSVFGNodes();
+    collectSinks();
+}
+
 void MHPAnalysis::collectLoadStoreSVFGNodes()
 {
     for (SVFG::const_iterator it = svfg->begin(), eit = svfg->end(); it != eit; ++it)
@@ -12,17 +18,22 @@ void MHPAnalysis::collectLoadStoreSVFGNodes()
             const StmtSVFGNode *node = SVFUtil::cast<StmtSVFGNode>(snode);
             if (node->getInst())
             {
-                // ldnodeSet.insert(node);
                 ldStNodeSet.insert(node);
             }
         }
         if (SVFUtil::isa<StoreSVFGNode>(snode))
         {
             const StmtSVFGNode *node = SVFUtil::cast<StmtSVFGNode>(snode);
-            if (node->getInst())
+            if (const Instruction* inst = node->getInst())
             {
-                // stnodeSet.insert(node);
                 ldStNodeSet.insert(node);
+
+                // mark all store null instruction directly
+                if (const StoreInst* st = SVFUtil::dyn_cast<StoreInst>(inst)) {
+                    if (SymbolTableInfo::isNullPtrSym(st->getValueOperand())) {
+                        markedNodeSet.insert(node);
+                    }
+                }
             }
         }
     }
@@ -110,12 +121,55 @@ void MHPAnalysis::dump(llvm::StringRef filename) {
         auto &loc = inst->getDebugLoc();
         if (loc)
         {
-            llvm::StringRef filename = loc->getFilename();
-            llvm::SmallVector<char> path(filename.begin(), filename.end());
-            llvm::sys::fs::make_absolute(path);
-            std::string fullname(path.begin(), path.end());
-            file << fullname << ":" << loc->getLine() << ":" << loc->getColumn() << "\n";
+            writeLocInfo(file, loc);
+        }
+    }
+    for (const CallBlockNode *node : deallocCallsite) {
+        const Instruction *cs = node->getCallSite();
+        auto &loc = cs->getDebugLoc();
+        if (loc)
+        {
+            writeLocInfo(file, loc);
         }
     }
     file.close();
+}
+
+PTACallGraph* MHPAnalysis::getCallgraph() {
+    return svfg->getPTA()->getPTACallGraph();
+}
+
+void MHPAnalysis::collectSinks() {
+    PAG* pag = svfg->getPAG();
+    for(PAG::CSToArgsListMap::iterator it = pag->getCallSiteArgsMap().begin(),
+            eit = pag->getCallSiteArgsMap().end(); it!=eit; ++it)
+    {
+
+        PTACallGraph::FunctionSet callees;
+        getCallgraph()->getCallees(it->first, callees);
+        for(PTACallGraph::FunctionSet::const_iterator cit = callees.begin(), ecit = callees.end(); cit!=ecit; cit++)
+        {
+            const SVFFunction* fun = *cit;
+			if (isSinkLikeFun(fun)) {
+				PAG::PAGNodeList &arglist = it->second;
+				assert(!arglist.empty()	&& "no actual parameter at deallocation site?");
+				/// we only choose pointer parameters among all the actual parameters
+				for (PAG::PAGNodeList::const_iterator ait = arglist.begin(),
+						aeit = arglist.end(); ait != aeit; ++ait) {
+					const PAGNode *pagNode = *ait;
+					if (pagNode->isPointer()) {
+                        deallocCallsite.insert(it->first);
+					}
+				}
+			}
+        }
+    }
+}
+
+void MHPAnalysis::writeLocInfo(raw_ostream &outs, const llvm::DebugLoc& loc) {
+    llvm::StringRef filename = loc->getFilename();
+    llvm::SmallVector<char> path(filename.begin(), filename.end());
+    llvm::sys::fs::make_absolute(path);
+    std::string fullname(path.begin(), path.end());
+    outs << fullname << ":" << loc->getLine() << ":" << loc->getColumn() << "\n";
 }
