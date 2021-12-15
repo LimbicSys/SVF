@@ -2,45 +2,43 @@
 
 using namespace SVF;
 
-MHPAnalysis::MHPAnalysis(SVFG *g, MHP *m) : svfg(g), mhp(m)
-{
+MHPAnalysis::MHPAnalysis(SVFG *g, MHP *m, PointerAnalysis *p) : svfg(g), mhp(m), pta(p) {
     collectLoadStoreSVFGNodes();
-    collectSinks();
 }
 
-void MHPAnalysis::collectLoadStoreSVFGNodes()
-{
-    for (SVFG::const_iterator it = svfg->begin(), eit = svfg->end(); it != eit; ++it)
-    {
+void MHPAnalysis::collectLoadStoreSVFGNodes() {
+    for (SVFG::const_iterator it = svfg->begin(), eit = svfg->end(); it != eit; ++it) {
         const SVFGNode *snode = it->second;
-        if (SVFUtil::isa<LoadSVFGNode>(snode))
-        {
+        if (SVFUtil::isa<LoadSVFGNode>(snode)) {
             const StmtSVFGNode *node = SVFUtil::cast<StmtSVFGNode>(snode);
-            if (node->getInst())
-            {
+            if (node->getInst()) {
                 ldStNodeSet.insert(node);
             }
         }
-        if (SVFUtil::isa<StoreSVFGNode>(snode))
-        {
+        if (SVFUtil::isa<StoreSVFGNode>(snode)) {
             const StmtSVFGNode *node = SVFUtil::cast<StmtSVFGNode>(snode);
-            if (const Instruction* inst = node->getInst())
-            {
+            if (const Instruction* inst = node->getInst()) {
                 ldStNodeSet.insert(node);
-
-                // mark all store null instruction directly
-                if (const StoreInst* st = SVFUtil::dyn_cast<StoreInst>(inst)) {
-                    if (SymbolTableInfo::isNullPtrSym(st->getValueOperand())) {
-                        markedNodeSet.insert(node);
-                    }
-                }
-            }
+           }
         }
     }
 }
 
-void MHPAnalysis::getMHPInstructions(PointerAnalysis *pta)
-{
+void MHPAnalysis::addToPointerSet(const StmtSVFGNode *node) {
+    NodeID id(0);
+    bool isLoad = SVFUtil::isa<LoadSVFGNode>(node);
+
+    // for global pointer
+    if (isLoad) {
+        id = node->getPAGSrcNodeID();
+    } else {
+        id = node->getPAGDstNodeID();
+    }
+
+    mhpPointers.push_back(id);
+}
+
+void MHPAnalysis::getMHPInstructions() {
     for (auto it1 = ldStNodeSet.begin(); it1 != ldStNodeSet.end(); it1++) {
         const StmtSVFGNode *node1 = SVFUtil::cast<StmtVFGNode>(*it1);
         const Instruction *inst1 = node1->getInst();
@@ -56,11 +54,16 @@ void MHPAnalysis::getMHPInstructions(PointerAnalysis *pta)
                 continue;
             }
             if (isMHPPair(node1, node2, pta)) {
+                addToPointerSet(node1);
+                addToPointerSet(node2);
                 markedNodeSet.insert(node1);
                 markedNodeSet.insert(node2);
             }
         }
     }
+
+    std::sort(mhpPointers.begin(), mhpPointers.end());
+    mhpPointers.erase(std::unique(mhpPointers.begin(), mhpPointers.end()), mhpPointers.end());
 }
 
 bool MHPAnalysis::isMHPPair(const StmtSVFGNode *n1, const StmtVFGNode *n2, PointerAnalysis *pta) {
@@ -117,19 +120,18 @@ void MHPAnalysis::dump(llvm::StringRef filename) {
     }
     SVFUtil::outs() << "Write MHP pairs to " << filename << "\n";
     for (const SVFGNode *node : markedNodeSet) {
-        const Instruction *inst =  SVFUtil::cast<StmtVFGNode>(node)->getInst();
-        auto &loc = inst->getDebugLoc();
-        if (loc)
-        {
-            writeLocInfo(file, loc);
+        if (const Instruction *inst =  SVFUtil::cast<StmtVFGNode>(node)->getInst()) {
+            dumpInst(file, inst);
         }
     }
     for (const CallBlockNode *node : deallocCallsite) {
-        const Instruction *cs = node->getCallSite();
-        auto &loc = cs->getDebugLoc();
-        if (loc)
-        {
-            writeLocInfo(file, loc);
+        if (const Instruction *cs = node->getCallSite()) {
+            dumpInst(file, cs);
+        }
+    }
+    for (const SVFGNode *node : nullPointerSet) {
+        if (const Instruction *inst =  SVFUtil::cast<StmtVFGNode>(node)->getInst()) {
+            dumpInst(file, inst);
         }
     }
     file.close();
@@ -139,16 +141,33 @@ PTACallGraph* MHPAnalysis::getCallgraph() {
     return svfg->getPTA()->getPTACallGraph();
 }
 
+void MHPAnalysis::collectNullPointers() {
+    for (SVFG::const_iterator it = svfg->begin(), eit = svfg->end(); it != eit; ++it) {
+        const SVFGNode *snode = it->second;
+        if (SVFUtil::isa<StoreSVFGNode>(snode)) {
+            const StmtSVFGNode *node = SVFUtil::cast<StmtSVFGNode>(snode);
+            if (const Instruction* inst = node->getInst()) {
+                if (const StoreInst* st = SVFUtil::dyn_cast<StoreInst>(inst)) {
+                    if (SymbolTableInfo::isNullPtrSym(st->getValueOperand())) {
+                        NodeID id = node->getPAGDstNodeID();
+                        if (isPointToMHP(id)) {
+                            nullPointerSet.insert(snode);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 void MHPAnalysis::collectSinks() {
     PAG* pag = svfg->getPAG();
     for(PAG::CSToArgsListMap::iterator it = pag->getCallSiteArgsMap().begin(),
-            eit = pag->getCallSiteArgsMap().end(); it!=eit; ++it)
-    {
+            eit = pag->getCallSiteArgsMap().end(); it != eit; ++it) {
 
         PTACallGraph::FunctionSet callees;
         getCallgraph()->getCallees(it->first, callees);
-        for(PTACallGraph::FunctionSet::const_iterator cit = callees.begin(), ecit = callees.end(); cit!=ecit; cit++)
-        {
+        for(PTACallGraph::FunctionSet::const_iterator cit = callees.begin(), ecit = callees.end(); cit!=ecit; cit++) {
             const SVFFunction* fun = *cit;
 			if (isSinkLikeFun(fun)) {
 				PAG::PAGNodeList &arglist = it->second;
@@ -158,7 +177,9 @@ void MHPAnalysis::collectSinks() {
 						aeit = arglist.end(); ait != aeit; ++ait) {
 					const PAGNode *pagNode = *ait;
 					if (pagNode->isPointer()) {
-                        deallocCallsite.insert(it->first);
+                        if (isPointToMHP(pagNode->getId())) {
+                            deallocCallsite.insert(it->first);
+                        }
 					}
 				}
 			}
@@ -172,4 +193,19 @@ void MHPAnalysis::writeLocInfo(raw_ostream &outs, const llvm::DebugLoc& loc) {
     llvm::sys::fs::make_absolute(path);
     std::string fullname(path.begin(), path.end());
     outs << fullname << ":" << loc->getLine() << ":" << loc->getColumn() << "\n";
+}
+
+bool MHPAnalysis::isPointToMHP(NodeID id) {
+    for (NodeID pointerId : mhpPointers) {
+        if (pta->alias(id, pointerId)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void MHPAnalysis::dumpInst(llvm::raw_ostream &outs, const Instruction *inst) {
+    if (auto &loc = inst->getDebugLoc()) {
+        writeLocInfo(outs, loc);
+    }
 }

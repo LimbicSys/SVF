@@ -22,17 +22,18 @@ class MHPAnalysis
   private:
     SVFG *svfg;
     MHP *mhp;
+    PointerAnalysis *pta;
 
     /// all stores/loads SVFGNodes
     SVFGNodeSet ldStNodeSet;
 
     SVFGNodeSet markedNodeSet;
     CallSiteSet deallocCallsite;
+    SVFGNodeSet nullPointerSet;
 
+    std::vector<NodeID> mhpPointers;
+    
     void collectLoadStoreSVFGNodes();
-
-    // collect deallocs
-    void collectSinks();
 
     PTACallGraph *getCallgraph();
 
@@ -44,10 +45,24 @@ class MHPAnalysis
     bool isMHPPair(const StmtSVFGNode *n1, const StmtVFGNode *n2, PointerAnalysis *pta);
 
     void writeLocInfo(raw_ostream &outs, const llvm::DebugLoc& loc);
+
+    bool isPointToMHP(NodeID id);
+
+    void addToPointerSet(const StmtSVFGNode *node);
+
+    void dumpInst(llvm::raw_ostream &outs, const Instruction *inst);
   public:
-    MHPAnalysis(SVFG *g, MHP *m);
-    void getMHPInstructions(PointerAnalysis *pta);
+    MHPAnalysis(SVFG *g, MHP *m, PointerAnalysis *p);
+
+    void getMHPInstructions();
+
     void dump(llvm::StringRef filename);
+
+    // collect deallocs, should call after *getMHPInstructions*
+    void collectSinks();
+
+    // collect null pointers, should call after *getMHPInstructions*
+    void collectNullPointers();
 };
 
 } // namespace SVF

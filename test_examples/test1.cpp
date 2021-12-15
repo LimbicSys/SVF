@@ -23,6 +23,7 @@ void *thread2(void *arg)
     int *p = (int*)arg;
     *p = 2;
     p = &x;
+    p = nullptr;
     // pthread_mutex_unlock(&m1);
     return nullptr;
 }
@@ -40,15 +41,18 @@ int main()
     int c = 111;
     int *z = new int;
     delete z;
-    z = (int*)malloc(sizeof(int));
-    free(z);
+    int *p = nullptr;
     pthread_mutex_init(&m1, nullptr);
     pthread_mutex_init(&m2, nullptr);
     pthread_create(&t1, nullptr, thread1, &c);
-    // pthread_create(&t3, nullptr, thread3, nullptr);
     pthread_create(&t2, nullptr, thread2, &c);
     pthread_join(t1, nullptr);
     pthread_join(t2, nullptr);
-    // pthread_join(t3, nullptr);
+
+    z = (int*)malloc(sizeof(int));
+    pthread_create(&t3, nullptr, thread3, z);
+    int lo = *z;
+    free(z);
+    pthread_join(t3, nullptr);
     return 0;
 }

@@ -61,9 +61,11 @@ bool MTA::runOnModule(SVFModule* module)
     LockAnalysis* lsa = computeLocksets(mhp->getTCT());
     FlowSensitive *pta = FSMPTA::createFSMPTA(module, mhp, lsa);
     SVFG *svfg = pta->getSVFG();
-    MHPAnalysis mhpAna(svfg, mhp);
+    MHPAnalysis mhpAna(svfg, mhp, pta);
     // PrintAliasPairs(pta);
-    mhpAna.getMHPInstructions(pta);
+    mhpAna.getMHPInstructions();
+    mhpAna.collectNullPointers();
+    mhpAna.collectSinks();
     if (!Options::DumpMHPPair.empty()) {
         mhpAna.dump(Options::DumpMHPPair.c_str());
     }
