@@ -22,3 +22,4 @@ doxygen/
 z3
 *.dot
 llvm*
+compile_commands.json
