@@ -111,8 +111,13 @@ void MHP::analyze()
  */
 void MHP::analyzeInterleaving()
 {
+    size_t tctNodeNum = tct->getTotalNodeNum();
+    size_t nodeCount = 0;
     for(TCT::const_iterator it = tct->begin(), eit = tct->end(); it!=eit; ++it)
     {
+        SVFUtil::outs() << "tct node: " << nodeCount << "/" << tctNodeNum << "\n";
+        nodeCount++;
+
         const CxtThread& ct = it->second->getCxtThread();
         NodeID rootTid = it->first;
         const Function* routine = tct->getStartRoutineOfCxtThread(ct);
@@ -122,6 +127,7 @@ void MHP::analyzeInterleaving()
         updateAncestorThreads(rootTid);
         updateSiblingThreads(rootTid);
 
+        DBOUT(DMHP, outs() << "start work list\n");
         while(!cxtStmtList.empty())
         {
             CxtThreadStmt cts = popFromCTSWorkList();
@@ -165,6 +171,7 @@ void MHP::analyzeInterleaving()
                 }
             }
         }
+        DBOUT(DMHP, outs() << "end work list\n");
     }
 
     /// update non-candidate functions' interleaving
@@ -183,9 +190,14 @@ void MHP::analyzeInterleaving()
 void MHP::updateNonCandidateFunInterleaving()
 {
     SVFModule* module = tct->getSVFModule();
+    size_t funcSize = module->funcSize();
+    size_t funcCount = 0;
     for (SVFModule::iterator F = module->begin(), E = module->end(); F != E; ++F)
     {
+        DBOUT(DMHP, outs() << "funcCount: " << funcCount << "/" << funcSize << "\n");
+        funcCount++;
         const SVFFunction* fun = *F;
+
         if (!tct->isCandidateFun(fun->getLLVMFun()) && !isExtCall(fun))
         {
             const Instruction *entryinst = &(fun->getLLVMFun()->getEntryBlock().front());
@@ -194,6 +206,8 @@ void MHP::updateNonCandidateFunInterleaving()
 
             const CxtThreadStmtSet& tsSet = getThreadStmtSet(entryinst);
 
+            DBOUT(DMHP, outs() << "tsSet size: " << tsSet.size() << "\n");
+            DBOUT(DMHP, outs() << "Function instruction number: " << fun->getLLVMFun()->getInstructionCount() << "\n");
             for (CxtThreadStmtSet::const_iterator it1 = tsSet.begin(), eit1 = tsSet.end(); it1 != eit1; ++it1)
             {
                 const CxtThreadStmt& cts = *it1;
@@ -205,6 +219,7 @@ void MHP::updateNonCandidateFunInterleaving()
                     if (inst == entryinst)
                         continue;
                     CxtThreadStmt newCts(cts.getTid(), curCxt, inst);
+
                     threadStmtToTheadInterLeav[newCts] |= threadStmtToTheadInterLeav[cts];
                     instToTSMap[inst].insert(newCts);
                 }
@@ -687,16 +702,16 @@ void MHP::validateResults()
  */
 void MHP::printInterleaving()
 {
-    for(ThreadStmtToThreadInterleav::const_iterator it = threadStmtToTheadInterLeav.begin(), eit = threadStmtToTheadInterLeav.end(); it!=eit; ++it)
-    {
-        outs() << "( t" << it->first.getTid() << " , $" << SVFUtil::getSourceLoc(it->first.getStmt()) << "$" << *(it->first.getStmt()) << " ) ==> [";
-        for (NodeBS::iterator ii = it->second.begin(), ie = it->second.end();
-                ii != ie; ii++)
-        {
-            outs() << " " << *ii << " ";
-        }
-        outs() << "]\n";
-    }
+    // for(ThreadStmtToThreadInterleav::const_iterator it = threadStmtToTheadInterLeav.begin(), eit = threadStmtToTheadInterLeav.end(); it!=eit; ++it)
+    // {
+    //     outs() << "( t" << it->first.getTid() << " , $" << SVFUtil::getSourceLoc(it->first.getStmt()) << "$" << *(it->first.getStmt()) << " ) ==> [";
+    //     for (NodeBS::iterator ii = it->second.begin(), ie = it->second.end();
+    //             ii != ie; ii++)
+    //     {
+    //         outs() << " " << *ii << " ";
+    //     }
+    //     outs() << "]\n";
+    // }
 }
 
 

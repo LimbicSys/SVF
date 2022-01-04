@@ -57,12 +57,16 @@ bool MTA::runOnModule(SVFModule* module)
 
     modulePass = this;
 
+    outs() << "Start MHP analysis...\n";
+    outs() << "Compute MHP...\n";
     MHP* mhp = computeMHP(module);
+    outs() << "Lock analysis...\n";
     LockAnalysis* lsa = computeLocksets(mhp->getTCT());
+    outs() << "FSMPTA...\n";
     FlowSensitive *pta = FSMPTA::createFSMPTA(module, mhp, lsa);
     SVFG *svfg = pta->getSVFG();
 
-    outs() << "Start MHP analysis...\n";
+    outs() << "MHP pairs analysis...\n";
     MHPAnalysis mhpAna(svfg, mhp, pta);
     // PrintAliasPairs(pta);
     mhpAna.getMHPInstructions();

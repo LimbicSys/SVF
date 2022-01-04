@@ -161,6 +161,7 @@ template <> struct Hash<NodePair>
 #define DSaber "saber"
 #define DMTA "mta"
 #define DCHA "cha"
+#define DMHP "mhp"
 
 /*
  * Number of clock ticks per second. A clock tick is the unit by which

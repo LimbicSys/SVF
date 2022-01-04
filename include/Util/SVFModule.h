@@ -198,6 +198,11 @@ public:
         }
     }
 
+    size_t funcSize() const
+    {
+        return FunctionSet.size();
+    }
+
 };
 
 } // End namespace SVF

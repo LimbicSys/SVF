@@ -10,6 +10,8 @@
 
 #include "MTA/TCT.h"
 #include "Util/SVFUtil.h"
+#include "CxtThreadStmtMap.h"
+
 namespace SVF
 {
 
@@ -29,7 +31,8 @@ public:
     typedef TCT::InstVec InstVec;
     typedef FIFOWorkList<CxtThreadStmt> CxtThreadStmtWorkList;
     typedef Set<CxtThreadStmt> CxtThreadStmtSet;
-    typedef Map<CxtThreadStmt,NodeBS> ThreadStmtToThreadInterleav;
+    // typedef Map<CxtThreadStmt,NodeBS> ThreadStmtToThreadInterleav;
+    typedef CxtThreadStmtMap<NodeBS> ThreadStmtToThreadInterleav;
     typedef Map<const Instruction*,CxtThreadStmtSet> InstToThreadStmtSetMap;
 
     typedef Set<CxtStmt> LockSpan;
